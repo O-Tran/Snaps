@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import SwipeableFilmStrip from '../components/home/SwipeableFilmStrip';
+import FilmRollIcon from '../components/icons/FilmRollIcon';
+import CloseIcon from '../components/icons/CloseIcon';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -80,17 +82,13 @@ const HomePage: React.FC = () => {
               onClick={() => navigate('/gallery')} 
               className="flex justify-center"
             >
-              <svg viewBox="0 0 24 24" className="w-12 h-12 text-white">
-                <path fill="currentColor" d="M3,5A2,2 0 0,1 5,3H19A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5C3.89,21 3,20.1 3,19V5M7,18H9L14,10L19,18H7Z" />
-              </svg>
+              <FilmRollIcon className="w-12 h-12 text-white" />
             </button>
             <button 
               onClick={() => navigate('/capture')} 
               className="flex justify-center"
             >
-              <svg viewBox="0 0 24 24" className="w-12 h-12 text-white">
-                <path fill="currentColor" d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.58,20 4,16.42 4,12C4,7.58 7.58,4 12,4C16.42,4 20,7.58 20,12C20,16.42 16.42,20 12,20M7,13H17V11H7" />
-              </svg>
+              <CloseIcon className="w-12 h-12 text-white" />
             </button>
             <button 
               onClick={() => navigate('/settings')} 
