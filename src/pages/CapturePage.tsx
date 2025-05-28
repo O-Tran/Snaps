@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Upload, Loader2, ArrowLeft, Settings, RefreshCw } from 'lucide-react';
+import { Camera, Upload, Loader2 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import { useSettings } from '../context/SettingsContext';
 import CameraCapture from '../components/capture/CameraCapture';
 import VideoUpload from '../components/capture/VideoUpload';
-import Button from '../components/ui/Button';
-import CloseIcon from '../components/icons/CloseIcon';
 import FilmRollIcon from '../components/icons/FilmRollIcon';
 
 type CaptureMode = 'Portrait' | 'Photo' | 'Video';
@@ -30,9 +28,6 @@ const CapturePage: React.FC = () => {
     setIsProcessing(true);
     setProgress(0);
     try {
-      const videoFile = new File([videoBlob], 'recorded-video.webm', { 
-        type: 'video/webm' 
-      });
       const videoUrl = URL.createObjectURL(videoBlob);
       const project = await addProject(
         projectTitle.trim() || `Project ${new Date().toLocaleDateString()}`,
@@ -40,8 +35,7 @@ const CapturePage: React.FC = () => {
         {
           interval: settings.interval,
           resolution: settings.resolution
-        },
-        setProgress
+        }
       );
       navigate(`/project/${project.id}`);
     } catch (error) {
@@ -67,8 +61,7 @@ const CapturePage: React.FC = () => {
         {
           interval: settings.interval,
           resolution: settings.resolution
-        },
-        setProgress
+        }
       );
       navigate(`/project/${project.id}`);
     } catch (error) {
@@ -151,13 +144,13 @@ const CapturePage: React.FC = () => {
         <div className="absolute bottom-0 w-full">
           {/* Mode Selector */}
           <div className="flex justify-center gap-8 mb-8">
-            {(['document', 'video', 'photo', 'portrait'] as const).map((m) => (
+            {(['Video', 'Photo', 'Portrait'] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
                 className={`text-lg font-medium ${mode === m ? 'text-yellow-500' : 'text-white/70'}`}
               >
-                {m.charAt(0).toUpperCase() + m.slice(1)}
+                {m}
               </button>
             ))}
           </div>

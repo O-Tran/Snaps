@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Save, RefreshCw, Moon, Sun, Clock, Image as ImageIcon, Film, ArrowLeft, Settings } from 'lucide-react';
+import { Save, RefreshCw, Moon, Sun, Clock, Image as ImageIcon, ArrowLeft, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
-import Button from '../components/ui/Button';
 import CloseIcon from '../components/icons/CloseIcon';
 import FilmRollIcon from '../components/icons/FilmRollIcon'; 
 
@@ -35,8 +34,10 @@ const SettingsPage: React.FC = () => {
   useEffect(() => {
     if (isSaving) {
       const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        // Modern browsers require both preventDefault and a return value
         e.preventDefault();
-        e.returnValue = '';
+        // Return a non-empty string (browser will show their own message regardless)
+        return 'Changes you made may not be saved.';
       };
       window.addEventListener('beforeunload', handleBeforeUnload);
       return () => window.removeEventListener('beforeunload', handleBeforeUnload);
