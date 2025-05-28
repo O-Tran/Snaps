@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Trash2, Calendar, Film, Image as ImageIcon, Loader2, Settings } from 'lucide-react';
+import { ArrowLeft, Download, Trash2, Calendar, Film, Image as ImageIcon, Loader2, Settings, Check, X, Maximize2 } from 'lucide-react';
 import { useProjects } from '../context/ProjectContext';
 import ImageGrid from '../components/project/ImageGrid';
 import Button from '../components/ui/Button';
 import { formatDate } from '../utils/date';
 import CloseIcon from '../components/icons/CloseIcon';
 import FilmRollIcon from '../components/icons/FilmRollIcon';
+import ImagePreviewModal from '../components/ui/ImagePreviewModal';
+import { Image } from '../types';
 
 const ProjectPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,16 +19,21 @@ const ProjectPage: React.FC = () => {
     selectedImages, 
     toggleImageSelection, 
     clearSelectedImages,
-    deleteProject
+    deleteProject,
+    updateProject
   } = useProjects();
   
   const [project, setProject] = useState(id ? getProjectById(id) : undefined);
   const [isExportingGif, setIsExportingGif] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [previewImage, setPreviewImage] = useState<Image | null>(null);
   
   useEffect(() => {
     if (id) {
       const projectData = getProjectById(id);
       setProject(projectData);
+      setEditTitle(projectData?.title || '');
       
       if (!projectData) {
         navigate('/');
@@ -36,6 +43,35 @@ const ProjectPage: React.FC = () => {
     // Clear selected images when leaving the page
     return () => clearSelectedImages();
   }, [id, getProjectById, navigate, clearSelectedImages]);
+
+  const handleSaveTitle = () => {
+    if (project && editTitle.trim()) {
+      updateProject(project.id, { title: editTitle.trim() });
+      setProject({ ...project, title: editTitle.trim() });
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditTitle(project?.title || '');
+    setIsEditing(false);
+  };
+  
+  const handleDeleteImage = (imageId: string) => {
+    deleteImage(project!.id, imageId);
+    if (previewImage?.id === imageId) {
+      setPreviewImage(null);
+    }
+  };
+
+  const handleDownloadImage = (imageUrl: string) => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `image-${Date.now()}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   
   if (!project) {
     return (
@@ -45,10 +81,6 @@ const ProjectPage: React.FC = () => {
     );
   }
 
-  const handleDeleteImage = (imageId: string) => {
-    deleteImage(project.id, imageId);
-  };
-  
   const handleExportGif = () => {
     setIsExportingGif(true);
     setTimeout(() => {
@@ -61,7 +93,7 @@ const ProjectPage: React.FC = () => {
   const downloadAllImages = () => {
     alert('In a real application, this would download all images as a zip file.');
   };
-  
+
   return (
     // Wrapper for centering the phone app
     <div className="min-h-screen w-full bg-gray-900 flex items-center justify-center">
@@ -122,12 +154,53 @@ const ProjectPage: React.FC = () => {
           {/* Center Content */}
           <div className="flex-1 px-6 mx-24">
             {/* Title */}
-            <h1 
-              className="text-6xl text-center mb-12" 
-              style={{ fontFamily: 'Dancing Script, cursive' }}
-            >
-              Find your best shot
-            </h1>
+            <div className="mb-12 text-center">
+              {isEditing ? (
+                <div className="flex items-center justify-center gap-4">
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveTitle();
+                      } else if (e.key === 'Escape') {
+                        handleCancelEdit();
+                      }
+                    }}
+                    className="bg-transparent border-b-2 border-yellow-500 text-6xl text-center focus:outline-none w-full max-w-2xl"
+                    style={{ fontFamily: 'Dancing Script, cursive' }}
+                    placeholder="Enter project title"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveTitle}
+                      className="p-2 rounded-full bg-green-500 hover:bg-green-600 transition-colors"
+                    >
+                      <Check className="w-6 h-6" />
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="p-2 rounded-full bg-red-500 hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <h1 
+                  className="text-6xl cursor-pointer hover:text-yellow-500 transition-colors"
+                  style={{ fontFamily: 'Dancing Script, cursive' }}
+                  onClick={() => {
+                    setEditTitle(project.title);
+                    setIsEditing(true);
+                  }}
+                >
+                  {project.title}
+                </h1>
+              )}
+            </div>
 
             {/* Image Grid */}
             <div className="grid grid-cols-3 gap-6 pb-32">
@@ -142,7 +215,16 @@ const ProjectPage: React.FC = () => {
                     alt={`Shot ${index + 1}`}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button 
+                      className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImage(image);
+                      }}
+                    >
+                      <Maximize2 className="w-6 h-6 text-white" />
+                    </button>
                     <button 
                       className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm"
                       onClick={(e) => {
@@ -192,6 +274,20 @@ const ProjectPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Image Preview Modal */}
+        {previewImage && (
+          <ImagePreviewModal
+            imageUrl={previewImage.url}
+            onClose={() => setPreviewImage(null)}
+            onDelete={() => {
+              if (window.confirm('Delete this image?')) {
+                handleDeleteImage(previewImage.id);
+              }
+            }}
+            onDownload={() => handleDownloadImage(previewImage.url)}
+          />
+        )}
       </div>
     </div>
   );

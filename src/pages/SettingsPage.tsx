@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Save, RefreshCw, Moon, Sun, Clock, Image as ImageIcon, Film, ArrowLeft, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
@@ -18,16 +18,30 @@ const SettingsPage: React.FC = () => {
   
   const handleSave = () => {
     setIsSaving(true);
+    // Apply settings immediately
+    updateSettings(tempSettings);
+    // Short delay just for UI feedback
     setTimeout(() => {
-      updateSettings(tempSettings);
       setIsSaving(false);
       navigate('/');
-    }, 800);
+    }, 300);
   };
   
   const handleReset = () => {
     setTempSettings(settings);
   };
+
+  // Prevent navigation while saving
+  useEffect(() => {
+    if (isSaving) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = '';
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+  }, [isSaving]);
   
   return (
     // Wrapper for centering the phone app

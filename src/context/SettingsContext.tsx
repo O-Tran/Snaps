@@ -22,19 +22,31 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return savedSettings ? JSON.parse(savedSettings) : defaultSettings;
   });
 
+  // Debounced localStorage update
   useEffect(() => {
-    localStorage.setItem('videoToImagesSettings', JSON.stringify(settings));
-    
-    // Apply theme
-    if (settings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    const timeoutId = setTimeout(() => {
+      localStorage.setItem('videoToImagesSettings', JSON.stringify(settings));
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [settings]);
 
+  // Separate effect for theme to prevent blocking
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      if (settings.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    });
+  }, [settings.theme]);
+
   const updateSettings = (newSettings: Partial<Settings>) => {
-    setSettings((prev) => ({ ...prev, ...newSettings }));
+    setSettings(prev => {
+      const updated = { ...prev, ...newSettings };
+      return updated;
+    });
   };
 
   return (

@@ -32,7 +32,8 @@ type ProjectContextType = {
 const extractImagesFromVideo = async (
   videoUrl: string, 
   options: VideoProcessingOptions,
-  projectId: string
+  projectId: string,
+  onProgress?: (progress: number) => void
 ): Promise<Image[]> => {
   return new Promise((resolve, reject) => {
     const video = document.createElement('video');
@@ -52,27 +53,27 @@ const extractImagesFromVideo = async (
       const width = video.videoWidth;
       const height = video.videoHeight;
       
-      // Apply resolution scaling
+      // Apply resolution scaling with better performance
       let scale = 1;
       switch (options.resolution) {
         case 'low':
-          scale = 0.5;
+          scale = 0.25; // Reduced from 0.5 to 0.25 for better performance
           break;
         case 'medium':
-          scale = 0.75;
+          scale = 0.5; // Reduced from 0.75 to 0.5
           break;
         case 'high':
-          scale = 1;
+          scale = 0.75; // Reduced from 1 to 0.75
           break;
       }
       
-      canvas.width = width * scale;
-      canvas.height = height * scale;
+      canvas.width = Math.floor(width * scale);
+      canvas.height = Math.floor(height * scale);
       
-      // Calculate total frames to extract
+      // Calculate total frames to extract with increased interval
       const duration = video.duration * 1000; // Convert to milliseconds
-      const interval = Math.max(options.interval, 200); // Enforce minimum 200ms interval
-      const totalFrames = Math.floor(duration / interval);
+      const interval = Math.max(options.interval, 500); // Increased minimum interval from 200ms to 500ms
+      const totalFrames = Math.min(Math.floor(duration / interval), 100); // Cap at 100 frames maximum
       let framesProcessed = 0;
       
       const extractFrame = (currentTime: number) => {
@@ -85,7 +86,7 @@ const extractImagesFromVideo = async (
             // Draw the current frame to canvas with resolution scaling
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            // Convert canvas to blob
+            // Convert canvas to blob with lower quality for better performance
             canvas.toBlob((blob) => {
               if (blob) {
                 const imageUrl = URL.createObjectURL(blob);
@@ -100,9 +101,16 @@ const extractImagesFromVideo = async (
               
               framesProcessed++;
               
+              // Report progress
+              if (onProgress) {
+                onProgress((framesProcessed / totalFrames) * 100);
+              }
+              
               if (framesProcessed < totalFrames) {
-                // Extract next frame
-                extractFrame((framesProcessed + 1) * interval);
+                // Extract next frame with a small delay to prevent browser freezing
+                setTimeout(() => {
+                  extractFrame((framesProcessed * interval));
+                }, 0);
               } else {
                 // All frames extracted
                 resolve(images);
@@ -111,7 +119,7 @@ const extractImagesFromVideo = async (
                 video.remove();
                 canvas.remove();
               }
-            }, 'image/jpeg', 0.95);
+            }, 'image/jpeg', 0.8); // Reduced quality from 0.95 to 0.8 for better performance
           } catch (error) {
             console.error('Error extracting frame:', error);
             reject(error);
@@ -133,7 +141,7 @@ const extractImagesFromVideo = async (
       if (images.length === 0) {
         reject(new Error('Video processing timed out'));
       }
-    }, 30000); // 30 second timeout
+    }, 60000); // Increased timeout from 30s to 60s for longer videos
   });
 };
 

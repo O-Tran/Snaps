@@ -1,44 +1,52 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Check, X } from 'lucide-react';
+import { useProjects } from '../../context/ProjectContext';
+import { Project, Image } from '../../types';
 
 interface SwipeableFilmStripProps {
-  project: any;
+  project: Project;
   onDelete: (id: string) => void;
 }
 
 const SwipeableFilmStrip: React.FC<SwipeableFilmStripProps> = ({ project, onDelete }) => {
   const navigate = useNavigate();
+  const { updateProject } = useProjects();
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(project.title);
   const startXRef = useRef(0);
   const stripRef = useRef<HTMLDivElement>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (isEditing) return; // Prevent swipe while editing
     startXRef.current = e.touches[0].clientX;
     setIsDragging(true);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isEditing) return; // Prevent swipe while editing
     startXRef.current = e.clientX;
     setIsDragging(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || isEditing) return;
     const currentX = e.touches[0].clientX;
     const diff = currentX - startXRef.current;
     setSwipeOffset(Math.max(Math.min(diff, 0), -stripRef.current!.offsetWidth));
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || isEditing) return;
     const currentX = e.clientX;
     const diff = currentX - startXRef.current;
     setSwipeOffset(Math.max(Math.min(diff, 0), -stripRef.current!.offsetWidth));
   };
 
   const handleTouchEnd = () => {
+    if (isEditing) return;
     setIsDragging(false);
     const threshold = stripRef.current!.offsetWidth * 0.5; // 50% threshold
     if (Math.abs(swipeOffset) > threshold) {
@@ -57,15 +65,32 @@ const SwipeableFilmStrip: React.FC<SwipeableFilmStripProps> = ({ project, onDele
     handleTouchEnd();
   };
 
-  const getProjectImages = (project: any) => {
-    const images = [project.thumbnail];
+  const handleSaveTitle = () => {
+    if (editTitle.trim()) {
+      updateProject(project.id, { title: editTitle.trim() });
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditTitle(project.title);
+    setIsEditing(false);
+  };
+
+  const getProjectImages = (project: Project) => {
+    let images: (string | null)[] = [];
+    
+    // If we have images in the project, take the first 3
     if (project.images && project.images.length > 0) {
-      images.push(...project.images.slice(0, 2));
+      images = project.images.slice(0, 3).map((img: Image) => img.url);
     }
+    
+    // If we have less than 3 images, fill the remaining slots with null
     while (images.length < 3) {
-      images.push(null); // Fill empty slots
+      images.push(null);
     }
-    return images.slice(0, 3);
+    
+    return images;
   };
 
   return (
@@ -84,19 +109,47 @@ const SwipeableFilmStrip: React.FC<SwipeableFilmStripProps> = ({ project, onDele
       >
         {/* Project Title and Edit */}
         <div className="flex items-center gap-4 mb-4">
-          <h2 
-            className="text-black text-xl font-medium cursor-pointer hover:text-yellow-600 transition-colors leading-relaxed"
-            onClick={() => navigate(`/project/${project.id}`)}
-          >
-            {project.title}
-          </h2>
-          <button
-            onClick={() => navigate(`/project/${project.id}/edit`)}
-            className="w-11 h-11 rounded-full hover:bg-black/10 transition-colors flex items-center justify-center"
-            aria-label="Edit project"
-          >
-            <Edit2 className="w-6 h-6" />
-          </button>
+          {isEditing ? (
+            <div className="flex items-center gap-2 flex-1">
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="flex-1 bg-transparent border-b-2 border-yellow-500 text-xl font-medium focus:outline-none"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSaveTitle}
+                  className="p-2 rounded-full hover:bg-green-500/10 text-green-500 transition-colors"
+                >
+                  <Check className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="p-2 rounded-full hover:bg-red-500/10 text-red-500 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h2 
+                className="text-black text-xl font-medium cursor-pointer hover:text-yellow-600 transition-colors leading-relaxed"
+                onClick={() => navigate(`/project/${project.id}`)}
+              >
+                {project.title}
+              </h2>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="w-11 h-11 rounded-full hover:bg-black/10 transition-colors flex items-center justify-center"
+                aria-label="Edit project title"
+              >
+                <Edit2 className="w-6 h-6" />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Top Film Strip */}
@@ -111,7 +164,7 @@ const SwipeableFilmStrip: React.FC<SwipeableFilmStripProps> = ({ project, onDele
 
         {/* Images Row */}
         <div className="grid grid-cols-3 gap-4 bg-black p-4">
-          {getProjectImages(project).map((imageUrl: string, index: number) => (
+          {getProjectImages(project).map((imageUrl: string | null, index: number) => (
             <div 
               key={`${project.id}-${index}`}
               className="aspect-square bg-white/10 cursor-pointer relative overflow-hidden rounded-xl min-h-[88px]"
